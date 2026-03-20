@@ -1,0 +1,40 @@
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: shrimp-tailscale
+    hostname: xiaren-01
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale-data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - sys_module
+    restart: unless-stopped
+
+  9router:
+    image: node:22-alpine
+    container_name: shrimp-9router
+    command: ["sh", "-c", "npm install -g 9router && 9router -n"]
+    volumes:
+      - ~/.9router:/root/.9router
+    network_mode: "service:tailscale"
+    depends_on:
+      - tailscale
+    restart: unless-stopped
+
+  openclaw:
+    image: node:22-alpine
+    container_name: shrimp-openclaw
+    command: ["sh", "-c", "apk add --no-cache git bash && npm install -g openclaw && openclaw gateway run"]
+    volumes:
+      - ~/.openclaw:/root/.openclaw
+    network_mode: "service:tailscale"
+    depends_on:
+      - tailscale
+    restart: unless-stopped
+
+volumes:
+  tailscale-data:
